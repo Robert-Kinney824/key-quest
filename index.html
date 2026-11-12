@@ -63,6 +63,7 @@ textarea::selection{background:#f0a03c66}
 .k.hl{background:var(--acc);color:#1a1205;font-weight:700;border-color:#fff;box-shadow:0 0 0 3px #f0a03c99;position:relative;z-index:1}
 .ac{display:flex;flex-direction:column;gap:2px;flex:1 1 0;min-width:0}
 .ac .k{height:14px;font-size:9px}
+.tipline{margin-top:14px;padding:10px 12px;background:var(--panel2);border-radius:8px;font-size:15px}
 .kbcap{color:var(--dim);font-size:13px;margin-top:6px}
 </style>
 </head>
@@ -82,6 +83,7 @@ textarea::selection{background:#f0a03c66}
   <div class="panel">
     <h2>2. Pick a game</h2>
     <div class="modes">
+      <div class="mode" data-mode="learn"><b>📖 Learn</b><small>No timer. After each answer you get a tip and the keys circled on a keyboard. Go at your own pace.</small></div>
       <div class="mode" data-mode="quiz"><b>⚡ Speed Quiz</b><small>12 questions, 10 seconds each. Streaks multiply your score. Answer with keys 1 to 4.</small></div>
       <div class="mode" data-mode="review"><b>🔁 Weak Spots</b><small>Only the shortcuts you keep missing. Play this on Fridays.</small></div>
       <div class="mode" data-mode="hands"><b>⌨️ Hands-On: Text Editing</b><small>Use the real keys. Finish each edit in as few keystrokes as possible. No mouse.</small></div>
@@ -223,6 +225,56 @@ const KB=[
  [["⇧ shift",2.25,"shift"],..."Z X C V B N M , . /".split(" ").map(c=>[c,1,c.toLowerCase()]),["⇧ shift",2.25,"shiftR"]],
  [["fn 🌐",1,"fn"],["⌃ ctrl",1,"ctrl"],["⌥ opt",1,"opt"],["⌘ cmd",1.25,"cmd"],["",5,"space"],["⌘ cmd",1.25,"cmdR"],["⌥ opt",1,"optR"],["←",1,"left"],"ARROWS",["→",1,"right"]]
 ];
+const TIP={
+"Open Spotlight":"Type a few letters of any app, file, or contact, then press Return. Faster than the Dock.",
+"Switch between apps":"Hold ⌘ and keep tapping Tab to move along. Let go to switch.",
+"Cycle windows of the same app":"Great for jumping between two Word documents or two browser windows.",
+"Close a window or tab":"Closes the window or tab, but the app keeps running.",
+"Quit the app":"Fully closes the app. Different from ⌘ W, which only closes a window.",
+"Hide the current app":"Hides it instantly. ⌘ Tab brings it back exactly as it was.",
+"Hide all other apps":"Clears the clutter so only the app you are in stays on screen.",
+"Open the app's Settings":"Works in almost every Mac app. The comma is the key right of M.",
+"Quit an app from the app switcher":"While holding ⌘ in the switcher, tap Tab to reach the app, then press Q. It quits without opening.",
+"Jump one word left":"⌥ means by word. Add ⇧ to select the word as you go.",
+"Jump to end of line":"⌘ means all the way. ⌘ ← goes to the start of the line.",
+"Jump to top of document":"⌘ ↓ goes to the bottom. Add ⇧ to select everything in between.",
+"Select to end of line":"Arrow moves, ⌘ goes all the way, ⇧ selects. Combine them.",
+"Select the next word":"Keep holding ⌥ ⇧ and tap → again to grab more words.",
+"Delete the previous word":"Much faster than holding Delete.",
+"Delete to start of line":"Clears everything to the left of the cursor on that line.",
+"Forward delete":"The Mac Delete key erases to the left. Hold fn (🌐) to erase to the right.",
+"Paste and match style":"Pastes text in the formatting of wherever you paste it. No stray fonts in emails.",
+"Redo":"Undo is ⌘ Z. Add ⇧ to bring back what you just undid.",
+"Tile window to left half":"Use → for the right half. Two windows side by side in two keystrokes.",
+"Fill the screen with a window":"Fills the screen without full-screen mode, so the menu bar and Dock stay.",
+"Center the window":"Centers the window without resizing it.",
+"Return window to previous size":"Undoes a tile or a fill.",
+"Mission Control":"Shows every open window at once. Click one, or press Esc.",
+"Switch to the next desktop":"⌃ ← goes back. Handy if you keep email on one desktop and work on another.",
+"Screenshot one window":"Press ⌘ ⇧ 4, tap Space, then click the window.",
+"Screenshot & recording toolbar":"One toolbar for every screenshot option, plus screen recording.",
+"Screenshot area to clipboard":"Adding ⌃ copies the shot instead of saving a file. Paste it straight into an email.",
+"Lock the screen":"Locks instantly when you step away from your desk.",
+"Preview a file (Quick Look)":"Select a file in Finder and tap Space. Tap again to close.",
+"Open the selected item":"Opens a file or enters a folder without double-clicking.",
+"Go up to enclosing folder":"Goes back up one folder level.",
+"Go to folder by path":"Type a path like ~/Downloads and press Return.",
+"Move a copied file here":"Copy with ⌘ C, then ⌘ ⌥ V moves the file instead of duplicating it. The Mac version of cut and paste.",
+"Move to Trash":"In Finder only. In a text box the same keys delete to the start of the line.",
+"Get Info":"Shows size, dates, and where a file lives.",
+"Show hidden files":"Shows hidden system files. Press again to hide them.",
+"Clipboard history":"Open Spotlight with ⌘ Space first, then ⌘ 4. Shows everything you copied recently.",
+"Spotlight Actions":"Open Spotlight first. Run tasks like sending a message or adding a reminder.",
+"Reveal result in Finder":"In Spotlight, shows where the file lives instead of opening it.",
+"Jump to address bar":"Selects the web address so you can type a new one or a search.",
+"Reopen the tab you just closed":"Press it again to bring back more closed tabs.",
+"Go to the last tab":"⌘ 1 through ⌘ 8 jump to those tabs. ⌘ 9 is always the last one.",
+"Next tab":"Add ⇧ to go to the previous tab.",
+"Find next match":"After ⌘ F, press ⌘ G to step through each match. Works in most apps.",
+"Search any app's menus":"Type part of a command name and it finds it in the menus, and shows you its shortcut.",
+"Force Quit a frozen app":"Opens the Force Quit window. Pick the frozen app and click Force Quit.",
+"Emoji & symbols picker":"Opens emoji and special characters wherever you are typing."
+};
 const KMAP={"⌘":"cmd","⌥":"opt","⌃":"ctrl","⇧":"shift","🌐":"fn","Space":"space","Tab":"tab","Delete":"delete","Return":"return","Esc":"esc","←":"left","→":"right","↑":"up","↓":"down"};
 const KNOTE={"`":"Backtick (`): top-left, just below Esc.",",":"Comma (,): bottom row, right of M.",".":"Period (.): bottom row, right of comma.","/":"Slash (/): bottom row, left of right Shift. Same key as ?.","🌐":"Globe / fn: the bottom-left corner key.","Delete":"Delete: top-right, above Return (it deletes backward, like Backspace).","Esc":"Esc: top-left corner."};
 function kbHTML(keys){
@@ -267,7 +319,7 @@ function start(mode){
     if(!pool.length){alert("Nothing to review in these weeks. Everything is mastered!");return}}
   const n=Math.min(12,Math.max(pool.length,4));
   let qs=weighted(pool,n);while(qs.length<n)qs.push(pool[Math.random()*pool.length|0]);
-  Q={mode,qs,i:0,score:0,streak:0,missed:[],answered:false,optItems:[]};
+  Q={mode,learn:mode==="learn",qs,i:0,score:0,streak:0,missed:[],answered:false,optItems:[]};
   $("qt").textContent=qs.length;show("quiz");askQ();
 }
 function askQ(){
@@ -288,27 +340,27 @@ function askQ(){
     $("qctx").textContent=q.ctx?"Context: "+q.ctx:" ";
     $("opts").innerHTML=Q.optItems.map((o,i)=>`<button class="opt" data-i="${i}"><span class="n">${i+1}</span><span>${keysHTML(o.keys)}</span></button>`).join("");
   }
-  Q.t0=Date.now();clearInterval(timerId);
-  timerId=setInterval(()=>{const left=Math.max(0,10000-(Date.now()-Q.t0));$("tbar").style.width=(left/100)+"%";if(left<=0)answer(-1)},50);
+  Q.t0=Date.now();clearInterval(timerId);$("tbar").parentNode.style.visibility=Q.learn?"hidden":"visible";
+  if(!Q.learn)timerId=setInterval(()=>{const left=Math.max(0,10000-(Date.now()-Q.t0));$("tbar").style.width=(left/100)+"%";if(left<=0)answer(-1)},50);
 }
 function answer(i){
   if(Q.answered)return;Q.answered=true;clearInterval(timerId);
   const q=Q.qs[Q.i],correct=Q.optItems.indexOf(q),btns=[...document.querySelectorAll(".opt")];
   btns[correct].classList.add("right");
   if(i===correct){
-    Q.streak++;const mult=Math.min(3,1+Math.floor(Q.streak/3)*0.5),bonus=Math.round(Math.max(0,10000-(Date.now()-Q.t0))/200);
+    Q.streak++;const mult=Math.min(3,1+Math.floor(Q.streak/3)*0.5),bonus=Q.learn?0:Math.round(Math.max(0,10000-(Date.now()-Q.t0))/200);
     const pts=Math.round((100+bonus)*mult);Q.score+=pts;
     boxes[q.id]=Math.min(3,(boxes[q.id]||0)+1);
-    $("fb").innerHTML=`<span class="good">+${pts}${mult>1?` (×${mult} streak)`:""}</span>`;
+    $("fb").innerHTML=`<span class="good">+${pts}${mult>1?` (×${mult} streak)`:""}</span> <span style="color:var(--ink)">${q.action}: ${keysHTML(q.keys)}</span>`;
   }else{
     if(i>=0)btns[i].classList.add("wrong");Q.streak=0;boxes[q.id]=0;
     if(!Q.missed.includes(q))Q.missed.push(q);
     $("fb").innerHTML=`<span class="bad">${i<0?"Time's up.":"Not quite."}</span> <span style="color:var(--ink)">${q.action}: ${keysHTML(q.keys)}</span>`;
   }
-  $("qkb").innerHTML=kbHTML(q.keys);store.set("boxes",boxes);$("score").textContent=Q.score;$("streak").textContent=Q.streak;
+  $("qkb").innerHTML=(TIP[q.action]?`<div class="tipline">💡 ${TIP[q.action]}</div>`:"")+kbHTML(q.keys);store.set("boxes",boxes);$("score").textContent=Q.score;$("streak").textContent=Q.streak;
   $("score").classList.remove("pop");void $("score").offsetWidth;$("score").classList.add("pop");
   $("nextQ").classList.remove("hidden");
-  if(i===correct){const at=Q.i;setTimeout(()=>{if(Q&&Q.answered&&Q.i===at&&!$("quiz").classList.contains("hidden"))nextQ()},900)}
+  
 }
 function nextQ(){if(!Q.answered)return;Q.i++;if(Q.i>=Q.qs.length)return finishQuiz();askQ()}
 $("opts").onclick=e=>{const b=e.target.closest(".opt");if(b)answer(+b.dataset.i)};

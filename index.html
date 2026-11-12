@@ -56,6 +56,408 @@ textarea::selection{background:#f0a03c66}
 .pop{animation:pop .25s}
 @keyframes pop{50%{transform:scale(1.05)}}
 @media(max-width:560px){.opts{grid-template-columns:1fr}.prompt{font-size:20px}}
+.kb{margin-top:16px;padding:10px;background:#0b0e14;border-radius:12px;display:flex;flex-direction:column;gap:4px;user-select:none}
+.kr{display:flex;gap:4px}
+.k{flex:1 1 0;min-width:0;height:30px;background:var(--key);border:1px solid var(--keyb);border-radius:5px;font-size:11px;color:var(--dim);display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden}
+.k.sm{height:18px;font-size:10px}
+.k.hl{background:var(--acc);color:#1a1205;font-weight:700;border-color:#fff;box-shadow:0 0 0 3px #f0a03c99;position:relative;z-index:1}
+.ac{display:flex;flex-direction:column;gap:2px;flex:1 1 0;min-width:0}
+.ac .k{height:14px;font-size:9px}
+.kbcap{color:var(--dim);font-size:13px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HOME -->
+<section id="home">
+  <h1>Key <span>Quest</span></h1>
+  <p class="sub">Learn Mac keyboard shortcuts, one week at a time.</p>
+
+  <div class="panel">
+    <h2>1. Pick your weeks</h2>
+    <div class="row" id="weekChips"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2. Pick a game</h2>
+    <div class="modes">
+      <div class="mode" data-mode="quiz"><b>⚡ Speed Quiz</b><small>12 questions, 10 seconds each. Streaks multiply your score. Answer with keys 1 to 4.</small></div>
+      <div class="mode" data-mode="review"><b>🔁 Weak Spots</b><small>Only the shortcuts you keep missing. Play this on Fridays.</small></div>
+      <div class="mode" data-mode="hands"><b>⌨️ Hands-On: Text Editing</b><small>Use the real keys. Finish each edit in as few keystrokes as possible. No mouse.</small></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Your mastery</h2>
+    <div class="mastery" id="mastery"></div>
+    <p class="tip">A shortcut is mastered after you get it right 3 times in a row. Best quiz score: <b id="best">0</b></p>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz" class="hidden">
+  <div class="hud"><span>Question <b id="qn">1</b>/<b id="qt">12</b></span><span>Streak <b id="streak">0</b></span><span>Score <b id="score">0</b></span></div>
+  <div class="timer"><i id="tbar"></i></div>
+  <div class="panel">
+    <div class="ctx" id="qdir"></div>
+    <div class="prompt" id="qprompt"></div>
+    <div class="ctx" id="qctx"></div>
+    <div class="opts" id="opts"></div>
+    <div class="feedback" id="fb"></div>
+    <div id="qkb"></div>
+    <div class="row" style="justify-content:space-between;margin-top:8px">
+      <button class="ghost" id="quitQ">Quit</button>
+      <button class="big hidden" id="nextQ">Next (Return)</button>
+    </div>
+  </div>
+</section>
+
+<!-- HANDS ON -->
+<section id="hands" class="hidden">
+  <div class="hud"><span>Challenge <b id="hn">1</b>/<b id="ht">10</b></span><span>Keystrokes <b id="hk">0</b> · Par <b id="hp">1</b></span><span>Score <b id="hscore">0</b></span></div>
+  <div class="panel">
+    <div class="prompt" id="htask"></div>
+    <div class="ctx" id="hhint">&nbsp;</div>
+    <textarea id="ta" spellcheck="false"></textarea>
+    <div class="feedback" id="hfb"></div>
+    <div id="hkb"></div>
+    <div class="row" style="justify-content:space-between;margin-top:8px">
+      <div class="row"><button class="ghost" id="quitH">Quit</button><button class="ghost" id="resetH">Reset (Esc)</button><button class="ghost" id="hintH">Show answer</button></div>
+      <button class="big hidden" id="nextH">Next (Return)</button>
+    </div>
+    <p class="tip">Click is disabled in the text box on purpose. Your cursor is the orange bar.</p>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results" class="hidden">
+  <div class="panel" style="text-align:center">
+    <div class="ctx" id="rtitle">Round complete</div>
+    <div class="score" id="rscore">0</div>
+    <div id="rmsg"></div>
+  </div>
+  <div class="panel" id="rmissWrap">
+    <h2>Practice these</h2>
+    <ul class="list" id="rmiss"></ul>
+  </div>
+  <div class="row"><button class="big" id="again">Play again</button><button class="ghost" id="home2">Home</button></div>
+</section>
+
+</div>
+<script>
+// ---------- DATA ----------
+// Keys: tokens separated by spaces. Tokens starting with ~ are plain words.
+const W = [
+ {w:1,name:"Apps & windows",items:[
+  ["Open Spotlight","⌘ Space"],
+  ["Switch between apps","⌘ Tab"],
+  ["Cycle windows of the same app","⌘ `"],
+  ["Close a window or tab","⌘ W"],
+  ["Quit the app","⌘ Q"],
+  ["Hide the current app","⌘ H"],
+  ["Hide all other apps","⌘ ⌥ H"],
+  ["Open the app's Settings","⌘ ,"],
+  ["Quit an app from the app switcher","⌘ Tab ~then Q"]]},
+ {w:2,name:"Text editing",items:[
+  ["Jump one word left","⌥ ←","text"],
+  ["Jump to end of line","⌘ →","text"],
+  ["Jump to top of document","⌘ ↑","text"],
+  ["Select to end of line","⌘ ⇧ →","text"],
+  ["Select the next word","⌥ ⇧ →","text"],
+  ["Delete the previous word","⌥ Delete","text"],
+  ["Delete to start of line","⌘ Delete","text"],
+  ["Forward delete","🌐 Delete","text"],
+  ["Paste and match style","⌘ ⌥ ⇧ V"],
+  ["Redo","⌘ ⇧ Z"]]},
+ {w:3,name:"Screen & windows",items:[
+  ["Tile window to left half","🌐 ⌃ ←"],
+  ["Fill the screen with a window","🌐 ⌃ F"],
+  ["Center the window","🌐 ⌃ C"],
+  ["Return window to previous size","🌐 ⌃ R"],
+  ["Mission Control","⌃ ↑"],
+  ["Switch to the next desktop","⌃ →"],
+  ["Screenshot one window","⌘ ⇧ 4 ~then Space"],
+  ["Screenshot & recording toolbar","⌘ ⇧ 5"],
+  ["Screenshot area to clipboard","⌘ ⌃ ⇧ 4"],
+  ["Lock the screen","⌘ ⌃ Q"]]},
+ {w:4,name:"Finder & Spotlight",items:[
+  ["Preview a file (Quick Look)","Space","Finder"],
+  ["Open the selected item","⌘ ↓","Finder"],
+  ["Go up to enclosing folder","⌘ ↑","Finder"],
+  ["Go to folder by path","⌘ ⇧ G","Finder"],
+  ["Move a copied file here","⌘ ⌥ V","Finder"],
+  ["Move to Trash","⌘ Delete","Finder"],
+  ["Get Info","⌘ I","Finder"],
+  ["Show hidden files","⌘ ⇧ .","Finder"],
+  ["Clipboard history","⌘ 4","in Spotlight"],
+  ["Spotlight Actions","⌘ 3","in Spotlight"],
+  ["Reveal result in Finder","⌘ Return","in Spotlight"]]},
+ {w:5,name:"Browser & power",items:[
+  ["Jump to address bar","⌘ L","browser"],
+  ["Reopen the tab you just closed","⌘ ⇧ T","browser"],
+  ["Go to the last tab","⌘ 9","browser"],
+  ["Next tab","⌃ Tab","browser"],
+  ["Find next match","⌘ G"],
+  ["Search any app's menus","⌘ ⇧ /"],
+  ["Force Quit a frozen app","⌘ ⌥ Esc"],
+  ["Emoji & symbols picker","🌐 E"]]}
+];
+const ALL=[];W.forEach(g=>g.items.forEach(([a,k,c])=>ALL.push({id:g.w+":"+a,week:g.w,action:a,keys:k,ctx:c||""})));
+
+// ---------- STORAGE ----------
+const store={get(k,d){try{const v=localStorage.getItem("kq_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("kq_"+k,JSON.stringify(v))}catch(e){}}};
+let boxes=store.get("boxes",{});      // id -> 0..3 (3 = mastered)
+let selWeeks=store.get("weeks",[1]);
+
+// ---------- HELPERS ----------
+const $=id=>document.getElementById(id);
+const show=id=>["home","quiz","hands","results"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function keysHTML(k){return k.split(" ").map(t=>t.startsWith("~")?`<span class="plain">${t.slice(1)}</span>`:`<span class="kbd">${t}</span>`).join("").replace(/<span class="plain">then<\/span><span class="kbd">/g,'<span class="plain">then</span><span class="kbd">')}
+const KB=[
+ [["esc",1.5,"esc"],..."F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12".split(" ").map(f=>[f,1,f]),["",1,"pw"]],
+ [..."` 1 2 3 4 5 6 7 8 9 0 - =".split(" ").map(c=>[c,1,c]),["delete",1.5,"delete"]],
+ [["tab",1.5,"tab"],..."Q W E R T Y U I O P [ ] \\".split(" ").map(c=>[c,1,c.toLowerCase()])],
+ [["caps",1.8,"caps"],..."A S D F G H J K L ; '".split(" ").map(c=>[c,1,c.toLowerCase()]),["return",1.7,"return"]],
+ [["⇧ shift",2.25,"shift"],..."Z X C V B N M , . /".split(" ").map(c=>[c,1,c.toLowerCase()]),["⇧ shift",2.25,"shiftR"]],
+ [["fn 🌐",1,"fn"],["⌃ ctrl",1,"ctrl"],["⌥ opt",1,"opt"],["⌘ cmd",1.25,"cmd"],["",5,"space"],["⌘ cmd",1.25,"cmdR"],["⌥ opt",1,"optR"],["←",1,"left"],"ARROWS",["→",1,"right"]]
+];
+const KMAP={"⌘":"cmd","⌥":"opt","⌃":"ctrl","⇧":"shift","🌐":"fn","Space":"space","Tab":"tab","Delete":"delete","Return":"return","Esc":"esc","←":"left","→":"right","↑":"up","↓":"down"};
+const KNOTE={"`":"Backtick (`): top-left, just below Esc.",",":"Comma (,): bottom row, right of M.",".":"Period (.): bottom row, right of comma.","/":"Slash (/): bottom row, left of right Shift. Same key as ?.","🌐":"Globe / fn: the bottom-left corner key.","Delete":"Delete: top-right, above Return (it deletes backward, like Backspace).","Esc":"Esc: top-left corner."};
+function kbHTML(keys){
+  const toks=keys.split(" ").filter(t=>!t.startsWith("~"));
+  const on=new Set(toks.map(t=>KMAP[t]||t.toLowerCase()));
+  const k=(l,w,id,cls)=>`<div class="k ${cls||""} ${on.has(id)?"hl":""}" style="flex-grow:${w}">${l}</div>`;
+  const rows=KB.map((r,ri)=>`<div class="kr">${r.map(x=>x==="ARROWS"?`<div class="ac">${k("↑",1,"up")}${k("↓",1,"down")}</div>`:k(x[0],x[1],x[2],ri===0?"sm":"")).join("")}</div>`).join("");
+  const notes=[...new Set(toks)].filter(t=>KNOTE[t]).map(t=>KNOTE[t]);
+  return `<div class="kb">${rows}</div>${notes.length?`<div class="kbcap">${notes.join(" ")}</div>`:""}`;
+}
+function weighted(pool,n){
+  const out=[],p=pool.slice();
+  while(out.length<n&&p.length){
+    const ws=p.map(i=>4-(boxes[i.id]||0));const tot=ws.reduce((a,b)=>a+b,0);
+    let r=Math.random()*tot,idx=0;while(r>ws[idx]){r-=ws[idx];idx++}
+    out.push(p.splice(idx,1)[0]);
+  }
+  return out;
+}
+
+// ---------- HOME ----------
+function renderHome(){
+  $("weekChips").innerHTML=W.map(g=>`<span class="chip ${selWeeks.includes(g.w)?"on":""}" data-w="${g.w}">Week ${g.w}: ${g.name}</span>`).join("");
+  $("mastery").innerHTML=W.map(g=>{
+    const m=g.items.filter(([a])=>(boxes[g.w+":"+a]||0)>=3).length,pct=Math.round(m/g.items.length*100);
+    return `<span>Week ${g.w}</span><div class="bar"><i style="width:${pct}%"></i></div><span>${pct}%</span>`}).join("");
+  $("best").textContent=store.get("best",0);
+  show("home");
+}
+$("weekChips").onclick=e=>{const c=e.target.closest(".chip");if(!c)return;const w=+c.dataset.w;
+  selWeeks=selWeeks.includes(w)?selWeeks.filter(x=>x!==w):[...selWeeks,w];if(!selWeeks.length)selWeeks=[w];store.set("weeks",selWeeks);renderHome()};
+document.querySelectorAll(".mode").forEach(m=>m.onclick=()=>start(m.dataset.mode));
+
+// ---------- QUIZ ----------
+let Q=null,timerId=null;
+function start(mode){
+  lastMode=mode;
+  if(mode==="hands")return startHands();
+  let pool=ALL.filter(i=>selWeeks.includes(i.week));
+  if(mode==="review"){pool=ALL.filter(i=>selWeeks.includes(i.week)&&(boxes[i.id]||0)<3&&boxes[i.id]!==undefined);
+    if(pool.length<4)pool=ALL.filter(i=>selWeeks.includes(i.week)&&(boxes[i.id]||0)<3);
+    if(!pool.length){alert("Nothing to review in these weeks. Everything is mastered!");return}}
+  const n=Math.min(12,Math.max(pool.length,4));
+  let qs=weighted(pool,n);while(qs.length<n)qs.push(pool[Math.random()*pool.length|0]);
+  Q={mode,qs,i:0,score:0,streak:0,missed:[],answered:false,optItems:[]};
+  $("qt").textContent=qs.length;show("quiz");askQ();
+}
+function askQ(){
+  const q=Q.qs[Q.i];Q.answered=false;Q.reverse=Math.random()<0.35;
+  $("qn").textContent=Q.i+1;$("score").textContent=Q.score;$("streak").textContent=Q.streak;
+  $("fb").textContent="";$("nextQ").classList.add("hidden");$("qkb").innerHTML="";
+  const distractPool=shuffle(ALL.filter(i=>i.keys!==q.keys&&i.action!==q.action));
+  // prefer distractors from same week (harder), then others
+  const same=distractPool.filter(i=>i.week===q.week),other=distractPool.filter(i=>i.week!==q.week);
+  const picks=[];for(const d of [...same,...other]){if(picks.length===3)break;if(!picks.some(p=>p.keys===d.keys))picks.push(d)}
+  Q.optItems=shuffle([q,...picks]);
+  if(Q.reverse){
+    $("qdir").textContent="What does this do?";$("qprompt").innerHTML=`<div class="combo">${keysHTML(q.keys)}</div>`;$("qkb").innerHTML=kbHTML(q.keys);
+    $("qctx").textContent=q.ctx?"Context: "+q.ctx:"";
+    $("opts").innerHTML=Q.optItems.map((o,i)=>`<button class="opt" data-i="${i}"><span class="n">${i+1}</span>${o.action}</button>`).join("");
+  }else{
+    $("qdir").textContent="Which shortcut?";$("qprompt").textContent=q.action;
+    $("qctx").textContent=q.ctx?"Context: "+q.ctx:" ";
+    $("opts").innerHTML=Q.optItems.map((o,i)=>`<button class="opt" data-i="${i}"><span class="n">${i+1}</span><span>${keysHTML(o.keys)}</span></button>`).join("");
+  }
+  Q.t0=Date.now();clearInterval(timerId);
+  timerId=setInterval(()=>{const left=Math.max(0,10000-(Date.now()-Q.t0));$("tbar").style.width=(left/100)+"%";if(left<=0)answer(-1)},50);
+}
+function answer(i){
+  if(Q.answered)return;Q.answered=true;clearInterval(timerId);
+  const q=Q.qs[Q.i],correct=Q.optItems.indexOf(q),btns=[...document.querySelectorAll(".opt")];
+  btns[correct].classList.add("right");
+  if(i===correct){
+    Q.streak++;const mult=Math.min(3,1+Math.floor(Q.streak/3)*0.5),bonus=Math.round(Math.max(0,10000-(Date.now()-Q.t0))/200);
+    const pts=Math.round((100+bonus)*mult);Q.score+=pts;
+    boxes[q.id]=Math.min(3,(boxes[q.id]||0)+1);
+    $("fb").innerHTML=`<span class="good">+${pts}${mult>1?` (×${mult} streak)`:""}</span>`;
+  }else{
+    if(i>=0)btns[i].classList.add("wrong");Q.streak=0;boxes[q.id]=0;
+    if(!Q.missed.includes(q))Q.missed.push(q);
+    $("fb").innerHTML=`<span class="bad">${i<0?"Time's up.":"Not quite."}</span> <span style="color:var(--ink)">${q.action}: ${keysHTML(q.keys)}</span>`;
+  }
+  $("qkb").innerHTML=kbHTML(q.keys);store.set("boxes",boxes);$("score").textContent=Q.score;$("streak").textContent=Q.streak;
+  $("score").classList.remove("pop");void $("score").offsetWidth;$("score").classList.add("pop");
+  $("nextQ").classList.remove("hidden");
+  if(i===correct){const at=Q.i;setTimeout(()=>{if(Q&&Q.answered&&Q.i===at&&!$("quiz").classList.contains("hidden"))nextQ()},900)}
+}
+function nextQ(){if(!Q.answered)return;Q.i++;if(Q.i>=Q.qs.length)return finishQuiz();askQ()}
+$("opts").onclick=e=>{const b=e.target.closest(".opt");if(b)answer(+b.dataset.i)};
+$("nextQ").onclick=nextQ;$("quitQ").onclick=()=>{clearInterval(timerId);renderHome()};
+function finishQuiz(){
+  const best=store.get("best",0);if(Q.score>best)store.set("best",Q.score);
+  const right=Q.qs.length-Q.missed.length;
+  showResults(Q.score,`${right} of ${Q.qs.length} right${Q.score>best?" · <b class='good'>New best!</b>":""}`,Q.missed);
+}
+
+// ---------- HANDS-ON ----------
+// | marks the starting cursor. check(value, selStart, selEnd) returns true when solved.
+const H=[
+ {task:"Jump to the end of the line.",text:"The quick| brown fox jumps",par:1,ans:"⌘ →",check:(v,s,e)=>s===e&&s===v.length},
+ {task:"Jump to the start of the line.",text:"Meet me at the Houston office|",par:1,ans:"⌘ ←",check:(v,s,e)=>s===0&&e===0},
+ {task:"Put the cursor right after the word \"brown\".",text:"The| quick brown fox jumps",par:2,ans:"⌥ → ⌥ →",check:(v,s,e)=>s===e&&s===15},
+ {task:"Select the word \"partner\".",text:"Call the |partner tomorrow",par:1,ans:"⌥ ⇧ →",check:(v,s,e)=>v.slice(s,e)==="partner"},
+ {task:"Delete the last word.",text:"Please send the draft today|",par:1,ans:"⌥ Delete",check:(v)=>v==="Please send the draft "},
+ {task:"Select the entire line.",text:"|Offer letter goes out Friday",par:1,ans:"⌘ ⇧ →",check:(v,s,e)=>s===0&&e===v.length},
+ {task:"Delete everything before the cursor on this line.",text:"DELETE ALL OF THIS |keep this part",par:1,ans:"⌘ Delete",check:(v)=>v==="keep this part"},
+ {task:"Delete the X using forward delete.",text:"Hello |Xworld",par:1,ans:"🌐 Delete",check:(v)=>v==="Hello world"},
+ {task:"Jump to the very bottom of the document.",text:"|Line one\nLine two\nLine three\nLine four",par:1,ans:"⌘ ↓",check:(v,s,e)=>s===e&&s===v.length},
+ {task:"Select the last two words.",text:"Interview is set for next week|",par:2,ans:"⌥ ⇧ ← ⌥ ⇧ ←",check:(v,s,e)=>v.slice(s,e)==="next week"}
+];
+let HS=null;const ta=$("ta");
+function startHands(){HS={i:0,score:0,results:[]};show("hands");loadH()}
+function loadH(){
+  const c=H[HS.i];HS.keys=0;HS.done=false;HS.hinted=false;
+  $("hn").textContent=HS.i+1;$("ht").textContent=H.length;$("hp").textContent=c.par;$("hk").textContent=0;$("hscore").textContent=HS.score;
+  $("htask").textContent=c.task;$("hhint").innerHTML="&nbsp;";$("hfb").textContent="";$("nextH").classList.add("hidden");$("hkb").innerHTML="";
+  const pos=c.text.indexOf("|");ta.value=c.text.replace("|","");ta.readOnly=false;
+  ta.focus();ta.setSelectionRange(pos,pos);
+}
+ta.addEventListener("mousedown",e=>{e.preventDefault();ta.focus()});
+ta.addEventListener("keydown",e=>{
+  if(!HS||HS.done){if(e.key==="Enter"){e.preventDefault();e.stopPropagation();nextH()}else if(HS&&HS.done)e.preventDefault();return}
+  if(e.key==="Escape"){e.preventDefault();loadH();return}
+  if(e.key==="Enter"){e.preventDefault();return}
+  if(["Meta","Alt","Shift","Control","CapsLock","Fn"].includes(e.key))return;
+  // block typing new characters: this round is about moving and deleting
+  if(e.key.length===1&&!e.metaKey&&!e.ctrlKey){e.preventDefault();flash("No typing. Use shortcuts to move, select, and delete.");return}
+  HS.keys++;$("hk").textContent=HS.keys;
+});
+["keyup","input","select"].forEach(ev=>ta.addEventListener(ev,checkH));
+document.addEventListener("selectionchange",()=>{if(document.activeElement===ta)checkH()});
+function flash(t){$("hfb").innerHTML=`<span class="bad">${t}</span>`}
+function checkH(){
+  if(!HS||HS.done||$("hands").classList.contains("hidden"))return;
+  const c=H[HS.i];
+  if(c.check(ta.value,ta.selectionStart,ta.selectionEnd)){
+    HS.done=true;ta.readOnly=true;
+    const k=Math.max(HS.keys,1),onPar=k<=c.par;
+    const pts=HS.hinted?25:onPar?150:Math.max(40,150-(k-c.par)*25);
+    HS.score+=pts;HS.results.push({c,ok:onPar&&!HS.hinted});
+    $("hscore").textContent=HS.score;
+    $("hfb").innerHTML=onPar&&!HS.hinted?`<span class="good">Perfect: ${k} keystroke${k>1?"s":""}. +${pts}</span>`
+      :`<span class="good">Done, +${pts}.</span> <span style="color:var(--ink)">Par is ${c.par}: ${keysHTML(c.ans)}</span>`;
+    $("nextH").classList.remove("hidden");$("hkb").innerHTML=kbHTML(c.ans);
+  }
+}
+function nextH(){if(!HS.done)return;HS.i++;if(HS.i>=H.length)return finishHands();loadH()}
+$("nextH").onclick=nextH;$("resetH").onclick=loadH;$("quitH").onclick=renderHome;
+$("hintH").onclick=()=>{HS.hinted=true;$("hhint").innerHTML="Answer: "+keysHTML(H[HS.i].ans);$("hkb").innerHTML=kbHTML(H[HS.i].ans);ta.focus()};
+function finishHands(){
+  const perfect=HS.results.filter(r=>r.ok).length;
+  const missed=HS.results.filter(r=>!r.ok).map(r=>({action:r.c.task,keys:r.c.ans}));
+  const hb=store.get("handsBest",0);if(HS.score>hb)store.set("handsBest",HS.score);
+  showResults(HS.score,`${perfect} of ${H.length} on par${HS.score>hb?" · <b class='good'>New best!</b>":""}`,missed);
+}
+
+// ---------- RESULTS ----------
+let lastMode="quiz";
+function showResults(score,msg,missed){
+  $("rscore").textContent=score;$("rmsg").innerHTML=msg;
+  $("rmissWrap").classList.toggle("hidden",!missed.length);
+  $("rmiss").innerHTML=missed.map(m=>`<li><span>${m.action}</span><span>${keysHTML(m.keys)}</span></li>`).join("");
+  show("results");
+}
+$("again").onclick=()=>start(lastMode);$("home2").onclick=renderHome;
+
+// ---------- GLOBAL KEYS ----------
+document.addEventListener("keydown",e=>{
+  if(!$("quiz").classList.contains("hidden")){
+    if(["1","2","3","4"].includes(e.key)&&!Q.answered){answer(+e.key-1)}
+    else if(e.key==="Enter"&&Q.answered){e.preventDefault();nextQ()}
+  }else if(!$("results").classList.contains("hidden")&&e.key==="Enter"){start(lastMode)}
+});
+renderHome();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Key Quest: Mac Shortcuts Game</title>
+<style>
+:root{--bg:#0f1218;--panel:#181d27;--panel2:#202737;--ink:#e8ecf3;--dim:#8a93a6;--acc:#f0a03c;--good:#3ecf8e;--bad:#ff6b6b;--key:#2a3245;--keyb:#3a4560}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:820px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:30px;margin:0 0 4px;letter-spacing:-.5px}
+h1 span{color:var(--acc)}
+h2{font-size:20px;margin:0 0 12px}
+.sub{color:var(--dim);margin:0 0 24px}
+.panel{background:var(--panel);border-radius:14px;padding:22px;margin-bottom:18px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{background:var(--panel2);border:1px solid var(--keyb);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer;font-size:14px;user-select:none}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#1a1205;font-weight:600}
+button.big{background:var(--acc);color:#1a1205;border:0;padding:13px 22px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--keyb);padding:11px 18px;border-radius:10px;font-size:15px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.mode{background:var(--panel2);border-radius:12px;padding:18px;cursor:pointer;border:2px solid transparent;transition:.15s}
+.mode:hover{border-color:var(--acc)}
+.mode b{display:block;font-size:17px;margin-bottom:4px}
+.mode small{color:var(--dim)}
+.mastery{display:grid;grid-template-columns:70px 1fr 44px;gap:8px 12px;align-items:center;font-size:14px}
+.bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--good);border-radius:4px;transition:width .4s}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 9px;margin:2px;background:var(--key);border:1px solid var(--keyb);border-bottom-width:3px;border-radius:7px;font-size:15px;font-weight:600;font-family:-apple-system,system-ui,sans-serif}
+.plain{color:var(--dim);margin:0 6px;font-size:14px}
+.hud{display:flex;justify-content:space-between;color:var(--dim);font-size:14px;margin-bottom:12px}
+.hud b{color:var(--ink)}
+.timer{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-bottom:18px}
+.timer i{display:block;height:100%;background:var(--acc)}
+.prompt{font-size:24px;font-weight:650;margin:6px 0 4px;min-height:40px}
+.ctx{color:var(--dim);font-size:14px;margin-bottom:18px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opt{background:var(--panel2);border:2px solid transparent;border-radius:12px;padding:14px;cursor:pointer;text-align:left;color:var(--ink);font-size:15px;display:flex;align-items:center;gap:10px;min-height:70px}
+.opt:hover{border-color:var(--keyb)}
+.opt .n{color:var(--dim);font-size:13px;width:16px;flex:none}
+.opt.right{border-color:var(--good);background:#16352a}
+.opt.wrong{border-color:var(--bad);background:#3a1d22}
+.feedback{margin-top:16px;min-height:28px;font-weight:600}
+.good{color:var(--good)}.bad{color:var(--bad)}
+.combo{font-size:20px;margin:6px 0 18px}
+textarea{width:100%;height:150px;background:#0b0e14;color:var(--ink);border:2px solid var(--keyb);border-radius:10px;padding:14px;font:17px/1.6 "SF Mono",Menlo,monospace;resize:none;caret-color:var(--acc)}
+textarea:focus{outline:none;border-color:var(--acc)}
+textarea::selection{background:#f0a03c66}
+.tip{color:var(--dim);font-size:14px;margin-top:10px}
+.list{margin:10px 0 0;padding:0;list-style:none}
+.list li{padding:8px 0;border-top:1px solid var(--panel2);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.score{font-size:46px;font-weight:800;color:var(--acc);margin:4px 0}
+.hidden{display:none}
+.pop{animation:pop .25s}
+@keyframes pop{50%{transform:scale(1.05)}}
+@media(max-width:560px){.opts{grid-template-columns:1fr}.prompt{font-size:20px}}
 </style>
 </head>
 <body>

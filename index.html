@@ -65,6 +65,7 @@ textarea::selection{background:#f0a03c66}
 .k.hl{background:var(--acc);color:#1a1205;font-weight:700;border-color:#fff;box-shadow:0 0 0 3px #f0a03c99;position:relative;z-index:1}
 .ac{display:flex;flex-direction:column;gap:2px;flex:1 1 0;min-width:0}
 .ac .k{height:14px;font-size:9px}
+.picked{margin-top:10px;font-weight:500;color:var(--ink)}
 .tipline{margin-top:14px;padding:10px 12px;background:var(--panel2);border-radius:8px;font-size:15px}
 .kbcap{color:var(--dim);font-size:13px;margin-top:6px}
 </style>
@@ -365,6 +366,7 @@ function answer(i){
     if(i>=0)btns[i].classList.add("wrong");Q.streak=0;boxes[q.id]=0;
     if(!Q.missed.includes(q))Q.missed.push(q);
     $("fb").innerHTML=`<span class="bad">${i<0?"Time's up.":"Not quite."}</span> <span style="color:var(--ink)">${q.action}: ${keysHTML(q.keys)}</span>`;
+    if(i>=0){const p=Q.optItems[i];$("fb").innerHTML+=Q.reverse?`<div class="picked">You picked <b>${p.action}</b>${p.ctx?` (${p.ctx})`:""}. That shortcut is ${keysHTML(p.keys)}</div>`:`<div class="picked">You picked ${keysHTML(p.keys)} That one does: <b>${p.action}</b>${p.ctx?` (${p.ctx})`:""}.</div>`}
   }
   $("qkb").innerHTML=(TIP[q.action]?`<div class="tipline">💡 ${TIP[q.action]}</div>`:"")+kbHTML(q.keys);store.set("boxes",boxes);$("score").textContent=Q.score;$("streak").textContent=Q.streak;
   $("score").classList.remove("pop");void $("score").offsetWidth;$("score").classList.add("pop");

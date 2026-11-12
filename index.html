@@ -56,7 +56,9 @@ textarea::selection{background:#f0a03c66}
 .pop{animation:pop .25s}
 @keyframes pop{50%{transform:scale(1.05)}}
 @media(max-width:560px){.opts{grid-template-columns:1fr}.prompt{font-size:20px}}
-.kb{margin-top:16px;padding:10px;background:#0b0e14;border-radius:12px;display:flex;flex-direction:column;gap:4px;user-select:none}
+.kbwrap{display:flex;gap:8px;margin-top:16px}
+.kbnav{width:17%;padding:10px 6px;background:#0b0e14;border-radius:12px;display:flex;flex-direction:column;gap:4px}
+.kb{flex:1;min-width:0;padding:10px;background:#0b0e14;border-radius:12px;display:flex;flex-direction:column;gap:4px;user-select:none}
 .kr{display:flex;gap:4px}
 .k{flex:1 1 0;min-width:0;height:30px;background:var(--key);border:1px solid var(--keyb);border-radius:5px;font-size:11px;color:var(--dim);display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden}
 .k.sm{height:18px;font-size:10px}
@@ -73,7 +75,12 @@ textarea::selection{background:#f0a03c66}
 <!-- HOME -->
 <section id="home">
   <h1>Key <span>Quest</span></h1>
-  <p class="sub">Learn Mac keyboard shortcuts, one week at a time.</p>
+  <p class="sub">Learn keyboard shortcuts, one week at a time.</p>
+
+  <div class="panel">
+    <h2>Your computer</h2>
+    <div class="row" id="platChips"><span class="chip" data-p="mac">🍎 Mac</span><span class="chip" data-p="pc">🪟 Windows PC</span></div>
+  </div>
 
   <div class="panel">
     <h2>1. Pick your weeks</h2>
@@ -147,10 +154,11 @@ textarea::selection{background:#f0a03c66}
 </section>
 
 </div>
+<script src="pc.js"></script>
 <script>
 // ---------- DATA ----------
 // Keys: tokens separated by spaces. Tokens starting with ~ are plain words.
-const W = [
+let W = [
  {w:1,name:"Apps & windows",items:[
   ["Open Spotlight","⌘ Space"],
   ["Switch between apps","⌘ Tab"],
@@ -205,7 +213,7 @@ const W = [
   ["Force Quit a frozen app","⌘ ⌥ Esc"],
   ["Emoji & symbols picker","🌐 E"]]}
 ];
-const ALL=[];W.forEach(g=>g.items.forEach(([a,k,c])=>ALL.push({id:g.w+":"+a,week:g.w,action:a,keys:k,ctx:c||""})));
+let PLAT="",ALL=[];function buildAll(){ALL=[];W.forEach(g=>g.items.forEach(([a,k,c])=>ALL.push({id:PLAT+g.w+":"+a,week:g.w,action:a,keys:k,ctx:c||""})))}buildAll();
 
 // ---------- STORAGE ----------
 const store={get(k,d){try{const v=localStorage.getItem("kq_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("kq_"+k,JSON.stringify(v))}catch(e){}}};
@@ -217,7 +225,7 @@ const $=id=>document.getElementById(id);
 const show=id=>["home","quiz","hands","results"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 function keysHTML(k){return k.split(" ").map(t=>t.startsWith("~")?`<span class="plain">${t.slice(1)}</span>`:`<span class="kbd">${t}</span>`).join("").replace(/<span class="plain">then<\/span><span class="kbd">/g,'<span class="plain">then</span><span class="kbd">')}
-const KB=[
+let KB=[
  [["esc",1.5,"esc"],..."F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12".split(" ").map(f=>[f,1,f]),["",1,"pw"]],
  [..."` 1 2 3 4 5 6 7 8 9 0 - =".split(" ").map(c=>[c,1,c]),["delete",1.5,"delete"]],
  [["tab",1.5,"tab"],..."Q W E R T Y U I O P [ ] \\".split(" ").map(c=>[c,1,c.toLowerCase()])],
@@ -225,7 +233,7 @@ const KB=[
  [["⇧ shift",2.25,"shift"],..."Z X C V B N M , . /".split(" ").map(c=>[c,1,c.toLowerCase()]),["⇧ shift",2.25,"shiftR"]],
  [["fn 🌐",1,"fn"],["⌃ ctrl",1,"ctrl"],["⌥ opt",1,"opt"],["⌘ cmd",1.25,"cmd"],["",5,"space"],["⌘ cmd",1.25,"cmdR"],["⌥ opt",1,"optR"],["←",1,"left"],"ARROWS",["→",1,"right"]]
 ];
-const TIP={
+let TIP={
 "Open Spotlight":"Type a few letters of any app, file, or contact, then press Return. Faster than the Dock.",
 "Switch between apps":"Hold ⌘ and keep tapping Tab to move along. Let go to switch.",
 "Cycle windows of the same app":"Great for jumping between two Word documents or two browser windows.",
@@ -275,15 +283,16 @@ const TIP={
 "Force Quit a frozen app":"Opens the Force Quit window. Pick the frozen app and click Force Quit.",
 "Emoji & symbols picker":"Opens emoji and special characters wherever you are typing."
 };
-const KMAP={"⌘":"cmd","⌥":"opt","⌃":"ctrl","⇧":"shift","🌐":"fn","Space":"space","Tab":"tab","Delete":"delete","Return":"return","Esc":"esc","←":"left","→":"right","↑":"up","↓":"down"};
-const KNOTE={"`":"Backtick (`): top-left, just below Esc.",",":"Comma (,): bottom row, right of M.",".":"Period (.): bottom row, right of comma.","/":"Slash (/): bottom row, left of right Shift. Same key as ?.","🌐":"Globe / fn: the bottom-left corner key.","Delete":"Delete: top-right, above Return (it deletes backward, like Backspace).","Esc":"Esc: top-left corner."};
+let KMAP={"⌘":"cmd","⌥":"opt","⌃":"ctrl","⇧":"shift","🌐":"fn","Space":"space","Tab":"tab","Delete":"delete","Return":"return","Esc":"esc","←":"left","→":"right","↑":"up","↓":"down"};
+let KNOTE={"`":"Backtick (`): top-left, just below Esc.",",":"Comma (,): bottom row, right of M.",".":"Period (.): bottom row, right of comma.","/":"Slash (/): bottom row, left of right Shift. Same key as ?.","🌐":"Globe / fn: the bottom-left corner key.","Delete":"Delete: top-right, above Return (it deletes backward, like Backspace).","Esc":"Esc: top-left corner."};
 function kbHTML(keys){
   const toks=keys.split(" ").filter(t=>!t.startsWith("~"));
   const on=new Set(toks.map(t=>KMAP[t]||t.toLowerCase()));
   const k=(l,w,id,cls)=>`<div class="k ${cls||""} ${on.has(id)?"hl":""}" style="flex-grow:${w}">${l}</div>`;
   const rows=KB.map((r,ri)=>`<div class="kr">${r.map(x=>x==="ARROWS"?`<div class="ac">${k("↑",1,"up")}${k("↓",1,"down")}</div>`:k(x[0],x[1],x[2],ri===0?"sm":"")).join("")}</div>`).join("");
   const notes=[...new Set(toks)].filter(t=>KNOTE[t]).map(t=>KNOTE[t]);
-  return `<div class="kb">${rows}</div>${notes.length?`<div class="kbcap">${notes.join(" ")}</div>`:""}`;
+  const nav=KB.nav?`<div class="kbnav">${KB.nav.map((r,ri)=>`<div class="kr">${r.map(x=>x?k(x[0],x[1],x[2],ri===0?"sm":""):`<div class="k ${ri===0?"sm":""}" style="flex-grow:1;visibility:hidden"></div>`).join("")}</div>`).join("")}</div>`:"";
+  return `<div class="kbwrap"><div class="kb">${rows}</div>${nav}</div>${notes.length?`<div class="kbcap">${notes.join(" ")}</div>`:""}`;
 }
 function weighted(pool,n){
   const out=[],p=pool.slice();
@@ -299,7 +308,7 @@ function weighted(pool,n){
 function renderHome(){
   $("weekChips").innerHTML=W.map(g=>`<span class="chip ${selWeeks.includes(g.w)?"on":""}" data-w="${g.w}">Week ${g.w}: ${g.name}</span>`).join("");
   $("mastery").innerHTML=W.map(g=>{
-    const m=g.items.filter(([a])=>(boxes[g.w+":"+a]||0)>=3).length,pct=Math.round(m/g.items.length*100);
+    const m=g.items.filter(([a])=>(boxes[PLAT+g.w+":"+a]||0)>=3).length,pct=Math.round(m/g.items.length*100);
     return `<span>Week ${g.w}</span><div class="bar"><i style="width:${pct}%"></i></div><span>${pct}%</span>`}).join("");
   $("best").textContent=store.get("best",0);
   show("home");
@@ -373,7 +382,7 @@ function finishQuiz(){
 
 // ---------- HANDS-ON ----------
 // | marks the starting cursor. check(value, selStart, selEnd) returns true when solved.
-const H=[
+let H=[
  {task:"Jump to the end of the line.",text:"The quick| brown fox jumps",par:1,ans:"⌘ →",check:(v,s,e)=>s===e&&s===v.length},
  {task:"Jump to the start of the line.",text:"Meet me at the Houston office|",par:1,ans:"⌘ ←",check:(v,s,e)=>s===0&&e===0},
  {task:"Put the cursor right after the word \"brown\".",text:"The| quick brown fox jumps",par:2,ans:"⌥ → ⌥ →",check:(v,s,e)=>s===e&&s===15},
@@ -448,6 +457,10 @@ document.addEventListener("keydown",e=>{
     else if(e.key==="Enter"&&Q.answered){e.preventDefault();nextQ()}
   }else if(!$("results").classList.contains("hidden")&&e.key==="Enter"){start(lastMode)}
 });
+const MAC={W,TIP,KB,KMAP,KNOTE,H};
+function setPlat(p){const s=p==="pc"&&window.PC?window.PC:MAC;W=s.W;TIP=s.TIP;KB=s.KB;KMAP=s.KMAP;KNOTE=s.KNOTE;H=s.H;PLAT=p==="pc"?"pc":"";buildAll();store.set("plat",p);document.querySelectorAll("#platChips .chip").forEach(c=>c.classList.toggle("on",c.dataset.p===p))}
+$("platChips").onclick=e=>{const c=e.target.closest(".chip");if(c){setPlat(c.dataset.p);renderHome()}};
+setPlat(store.get("plat","mac"));
 renderHome();
 </script>
 </body>
